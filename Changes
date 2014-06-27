@@ -1,1 +1,3 @@
-    * Added perl bits
+0.1.0 2014-06-27
+    * first release, things work, 
+    * in bin/stick connect, morph, pulse, blink not yet implemented 

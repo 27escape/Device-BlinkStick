@@ -1,0 +1,97 @@
+#!/usr/bin/env perl
+# PODNAME: stick - simple script to ...
+# ABSTRACT: Create a boilerplate app for App::Basis
+
+=head1 NAME
+
+stick
+
+=head1 SYNOPSIS
+
+    > stick ..options..
+
+    to get full help use
+    > stick --help   
+
+=head1 DESCRIPTION
+
+Description of what your application does
+
+=cut
+
+#
+# (c) yourname, your@email.address.com
+# this code is released under the Perl Artistic License
+
+use 5.10.0;
+use strict;
+use warnings;
+use App::Basis;
+use Device::BlinkStick;
+use WebColors;
+use Data::Printer;
+
+# -----------------------------------------------------------------------------
+# main
+
+my $program = get_program();
+
+my %opt = init_app(
+    help_text    => "Control a BlinkStick",
+    help_cmdline => "",
+    options      => {
+        'verbose|v'     => 'Dump extra useful information',
+        'inverse'       => 'use inverse mode',
+        'set_color|c=s' => { desc => 'set color by name or hex triplet' },
+
+        # 'mode=i' => 'set mode, 0 normal, 1 inverse, 2 WS2812',
+        'info|i'       => 'get info about connected devices',
+        'set_block1=s' => 'Set infoblock 1 contents',
+        'set_block2=s' => 'Set infoblock 2 contents',
+        'serial=s'     => 'Use device that has this serial number',
+        'name=s'       => 'use device that has this name in info_block2',
+    },
+);
+
+# debug will go into "~/$program.log" by default
+
+if ( $opt{verbose} ) {
+    debug( "INFO", "Started" );
+}
+
+my $stick = Device::BlinkStick->new(
+    verbose     => $opt{verbose},
+    inverse     => $opt{inverse},
+    serial_num  => $opt{serial},
+    device_name => $opt{name}
+);
+
+if ( $opt{info} ) {
+    my $info = $stick->info;
+    my ( $r, $g, $b ) = $stick->get_color();
+    my $color;
+    $color = rgb_to_colorname( $r, $g, $b );
+    if ( !$color ) {
+        $color = sprintf( "#%02X%02X%02X", $r, $g, $b );
+    }
+
+    say "Found device:
+    Manufacturer:  $info->{manufacturer} 
+    Description:   $info->{product}
+    Serial:        $info->{serial}
+    Info Block 1:  $info->{info1}
+    Info Block 2:  $info->{info2}
+    Current Color: $color";
+}
+
+if ( $opt{set_block1} ) {
+    $stick->set_info_block1( $opt{set_block1} );
+}
+if ( $opt{set_block2} ) {
+    $stick->set_info_block2( $opt{set_block2} );
+}
+
+if ( $opt{set_color} ) {
+    my @c = to_rgb( $opt{set_color} );
+    my $s = $stick->set_color(@c);
+}
