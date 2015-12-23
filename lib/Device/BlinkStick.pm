@@ -76,13 +76,9 @@ has inverse => ( is => 'ro' ) ;
 
 Get all blinkstick devices available
 
-=over 4
-
 =item first
 
 Get the first blicnk stick device found
-
-=over 4
 
 =item verbose
 
