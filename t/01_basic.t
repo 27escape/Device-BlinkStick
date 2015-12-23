@@ -23,31 +23,37 @@ use Test::More tests => 2;
 BEGIN { use_ok('Device::BlinkStick'); }
 
 SKIP: {
-
     if ( $ENV{AUTHOR_TESTING} ) {
 
         # these tests need a blink stick to be attached
         subtest 'authors_own' => sub {
-            my $stick = Device::BlinkStick->new();
+            my $bs = Device::BlinkStick->new();
+            my $stick = $bs->first() ;
             my $info  = $stick->info();
-            ok( $info->{serial},       "has a serial number" );
+            ok( $info->{serial_number},       "has a serial number" );
             ok( $info->{manufacturer}, "has a manufacturer" );
             ok( $info->{product},      "has a product" );
-            ok( $info->{info1},        "has a infoblock 1" );
-            ok( $info->{info2},        "has a infoblock 2" );
+            ok( $info->{device_name},        "has a infoblock 1" );
+            ok( $info->{access_token},        "has a infoblock 2" );
 
             my ( $r, $g, $b ) = $stick->get_color();
             ok( defined $r && defined $g && defined $b, "has a color" );
 
+            my $tok = $stick->get_access_token() ;
             my $info2 = "test $$";
-            $stick->set_info_block2($info2);
-            ok( $info2 eq $stick->get_info_block2(), "set infoblock 2" );
+            $stick->set_access_token($info2);
+            ok( $info2 eq $stick->get_access_token(), "set_access_token" );
+            # reset the token
+            $stick->set_access_token($tok) ;
+
+            my ( $r1, $g1, $b1 ) = $stick->get_color();
 
             $stick->set_color( 0, 0,   0 );
             $stick->set_color( 0, 255, 0 );
             ( $r, $g, $b ) = $stick->get_color();
             ok( "$r-$g-$b" eq '0-255-0', "set color green" );
-            $stick->set_color( 0, 0, 0 );
+            # reset the color
+            $stick->set_color( $r1, $g1, $b1  );
         }
     }
     else {
