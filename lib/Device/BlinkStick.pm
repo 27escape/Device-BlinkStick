@@ -13,6 +13,13 @@ Device::BlinkStick
     use Device::BlinkStick;
 
     my $bs = Device::BlinkStick->new() ;
+
+    # set first LED on all devices to blue
+    my $all_devices = $bs->devices() ;
+    foreach my $k ( keys %$all_devices) {
+        $all->{$k}->set_color( 'blue') ;
+    }
+
     # get the first blinkstick found
     my $device = $bs->first() ;
     # make it red
@@ -24,21 +31,7 @@ Device::BlinkStick
 
 =head1 DESCRIPTION
 
-See Also 
-
-=head2 left to do from python version
-
-    def _usb_get_string(self, device, length, index):
-    def get_led_data(self):
-    def data_to_message(self, data):
-    def set_random_color(self):
-    def turn_off(self):
-    def pulse(self, red=0, green=0, blue=0, name=None, hex=None, repeats=1, duration=1000, steps=50):
-    def blink(self, red=0, green=0, blue=0, name=None, hex=None, repeats=1, delay=500):
-    def morph(self, red=0, green=0, blue=0, name=None, hex=None, duration=1000, steps=50):
-    def open_device(self, d):
-
-=over 4
+Module to control a number of blinkstick devices L<http://blinkstick.com> connected via USB.
 
 =cut
 
@@ -68,25 +61,40 @@ has inverse => ( is => 'ro' ) ;
 
 # ----------------------------------------------------------------------------
 
-=item new
+=head2 new
 
-=over 4
+Instantiate a new object, also finds all currently connected devices and populates 
+the accessor method variables
 
-=item devices
-
-Get all blinkstick devices available
-
-=over 4
-
-=item first
-
-Get the first blicnk stick device found
+=head3 parameters
 
 =over 4
 
 =item verbose
 
 output some debug as things happen
+
+=back
+
+=head3 access methods
+
+=over 4
+
+=item devices
+
+Get all blinkstick device objects available as a hash ref
+
+    my $bs = Device::BlinkStick->new() ;
+    my $devices = $bs->devices() ;
+
+=item first
+
+Get the first blink stick device (object) found
+
+    my $bs = Device::BlinkStick->new() ;
+    my $device = $bs->first() ;
+    # make it red
+    $first->set_color( 'red') ;
 
 =back
 
@@ -102,7 +110,18 @@ sub BUILD
 }
 
 # ----------------------------------------------------------------------------
-# find all the blinkstick devices
+# find all the connected blinkstick devices
+
+=head2 refresh_devices
+
+Check the USB for any added or removed devices and update our internal list
+
+Returns all blinkstick device objects available as a hash ref
+
+    my $bs = Device::BlinkStick->new() ;
+    my $current = $bs->refresh_devices() ;
+
+=cut
 
 sub refresh_devices
 {
@@ -120,12 +139,17 @@ sub refresh_devices
             delete $self->{first} ;
             $self->{devices} = {} ;
             foreach my $dev (@sticks) {
-                my $device = Device::BlinkStick::Stick->new( device => $dev, verbose => $self->verbose(), inverse => $self->inverse() ) ;
+                my $device = Device::BlinkStick::Stick->new(
+                    device  => $dev,
+                    verbose => $self->verbose(),
+                    inverse => $self->inverse()
+                ) ;
                 if ( !$self->{first} ) {
                     $self->{first} = $device ;
                 }
                 # build the mapping of devices
-                $self->{devices}->{ lc($device->serial_number()) } = $device ;
+                $self->{devices}->{ lc( $device->serial_number() ) }
+                    = $device ;
             }
         }
     }
@@ -133,9 +157,50 @@ sub refresh_devices
     return $self->{devices} ;
 }
 
+# ----------------------------------------------------------------------------
+# find a matching device
+
+=head2 find
+
+Find a device by name or serial number
+
+    my $bs = Device::BlinkStick->new() ;
+    my $d = $bs->find( 'strip') ;   # I have a device I've named strip!
+    $d->set_mode( 3) ;
+    $d->set_color( 'green') ;       # set all LEDs to green
+
+=over 4
+
+=item name
+
+The name or serial number to match
+
 =back
 
-=cut 
+Returns undef if fails to match a device
+
+=cut
+
+sub find
+{
+    my $self = shift ;
+    my ($name) = @_ ;
+    my $stick ;
+
+    $name = lc($name) ;
+    # check match on serial number
+    if ( $self->{devices}->{$name} ) {
+        $stick = $self->{devices}->{$name};
+    } else {
+        # match against each device name
+        foreach my $s ( keys %{ $self->{devices} } ) {
+            if ( lc( $self->{devices}->{$s}->device_name ) eq $name ) {
+                $stick = $self->{devices}->{$s} ;
+            }
+        }
+    }
+    return $stick ;
+}
 
 # ----------------------------------------------------------------------------
 1 ;
