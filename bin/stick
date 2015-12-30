@@ -8,42 +8,54 @@ stick
 
 =head1 SYNOPSIS
 
-    > stick ..options..
-
-    to get full help use
-    > stick --help   
+  Syntax: stick [options] 
+  
+  About:  Control a BlinkStick
+  
+  [options]
+    -h, -?, --help                    Show help
+    --blink                           number of times to blink
+    -b, --brightness                  set LED brightness percentage, 0..100 [DEFAULT: 20]
+    --channel                         blinkstick pro only, which block of 64 LEDs to write to
+    -c, --color                       set color by name, hex triplet or random
+    --delay                           Delay time in msecs between blinks [DEFAULT: 150]
+    -d, --device                      use device/serial what ever matches
+    -i, --index                       blinkstick pro only, which LED in block to write to
+    --info                            get info about connected devices
+    --inverse                         original blinkstick only, use inverse mode,
+    -m, --mode                        blinkstick pro only, set mode, 0 normal, 1 inverse, 2 WS2812, 3 WS2812 mirror
+    --name                            use device that has this name
+    --serial                          Use device that has this serial number
+    --set_leds                        blinkstick pro only, set number of leds attached to device
+    --set_name, --set-infoblock1      Set name into infoblock 1
+    --set_token, --set-infoblock2     Set access token into infoblock 2
+    -v, --verbose                     Dump extra useful information
 
 =head1 DESCRIPTION
 
-Description of what your application does
-
-=head1 TODO
-
---set-mode (for pro 0 default, 1 inverse, 2 ws2812)
-
-serial number ends
-  * -1.2 standard stick
-  * -2.1 pro stick
-  * -3.0 blinkstrip/square (8 leds)
-  * nano has 2 leds
-  * flex (32 pixels)
-
-if multiple sticks and no device picked then error
-if pro action on a std stick then error
-
+Control a USB blinkstick L<http://blinkstick.com>
+  
 =cut
 
 #
-# (c) yourname, your@email.address.com
+# (c) Kevin Mulholland, moodfarm@cpan.org
 # this code is released under the Perl Artistic License
+
+# notes
+# serial number ends
+#   * -1.2 standard stick
+#   * -2.1 pro stick
+#   * -3.0 blinkstrip/square (8 leds)
+#   * nano has 2 leds
+#   * flex (32 pixels)
+# if multiple sticks and no device picked then error
+# if pro action on a std stick then either ignore or error
 
 use 5.10.0 ;
 use strict ;
 use warnings ;
 use App::Basis ;
 use Device::BlinkStick ;
-use WebColors ;
-use Time::HiRes qw(usleep) ;
 use Data::Printer ;
 
 # -----------------------------------------------------------------------------
@@ -127,24 +139,13 @@ my $bs = Device::BlinkStick->new(
 my $stick ;
 my $devices = $bs->devices() ;
 if ( $opt{serial} || $opt{name} || $opt{device} ) {
-    foreach my $f (qw( name serial device)) {
-        $opt{$f} = lc( $opt{$f} ) if ( $opt{$f} ) ;
-    }
-    if ( $opt{device} ) {
-        $opt{serial} = $opt{device} ;
-        $opt{name}   = $opt{device} ;
-    }
-    if ( $opt{serial} && $devices->{ $opt{serial} } ) {
-        $stick = $devices->{ $opt{serial} } ;
-    } else {
-        foreach my $s ( keys %$devices ) {
-            if ( lc( $devices->{$s}->device_name ) eq lc( $opt{name} ) ) {
-                $stick = $devices->{$s} ;
-            }
-        }
-    }
+    # decide which parameter to use
+    my $name = $opt{serial} || $opt{name} || $opt{device} ;
+    # do we have it
+    $stick = $bs->find($name) ;
+
     if ( !$stick ) {
-        msg_exit("A matching device could not be found") ;
+        msg_exit( "A matching device could not be found", 1 ) ;
     }
 }
 if ( $opt{info} ) {
@@ -161,6 +162,10 @@ if ( $opt{info} ) {
 # set a default stick
 $stick = $bs->first() if ( !$stick ) ;
 
+if ( !$stick ) {
+    msg_exit( "Could not find any Blinkstick devices", 1 ) ;
+}
+
 if ( $opt{mode} ) {
     if ( $stick->type eq 'pro' ) {
         $stick->set_mode( $opt{mode} ) ;
@@ -172,8 +177,13 @@ if ( $opt{mode} ) {
 }
 
 if ( $opt{set_leds} ) {
-    $action++ ;
-    $stick->set_leds( $opt{set_leds} ) ;
+    if ( $stick->type ne 'pro' ) {
+        say STDERR "Cannot set number of LEDs on this type of device" ;
+    } else {
+        $action++ ;
+        # set the number of leds connected to this device
+        $stick->set_leds( $opt{set_leds} ) ;
+    }
 }
 
 if ( $opt{set_name} ) {
@@ -191,31 +201,22 @@ if ( $opt{brightness} ) {
 
 if ( $opt{color} ) {
     $action++ ;
-    my $r = $opt{color} ;
-    my ( $g, $b ) ;
-    if ( defined && $r !~ /^\d+$/ ) {
-        $r = lc($r) ;
-        if ( $r eq 'off' ) {
-            ( $r, $g, $b ) = ( 0, 0, 0 ) ;
-        } elsif ( $r =~ /(random|rand|rnd)/i ) {
-            ( $r, $g, $b )
-                = ( int( rand(255) ), int( rand(255) ), int( rand(255) ) ) ;
-        } else {
-            # try to determine what it should be
-            ( $r, $g, $b ) = to_rgb($r) ;
-        }
-    }
 
-    $opt{index}-- if ( $opt{index} ) ;    # 0..7
+    $opt{index}-- if ( $opt{index} ) ;    # e.g. 0..7
     if ( $opt{blink} ) {
-        for ( my $i = 0; $i < $opt{blink}; $i++ ) {
-            $stick->set_color( 0, 0, 0, $opt{channel}, $opt{index} ) ;
-            usleep( $opt{delay} * 1000 ) ;
-            $stick->set_color( $r, $g, $b, $opt{channel}, $opt{index} ) ;
-            usleep( $opt{delay} * 1000 ) ;
-        }
+        $stick->blink(
+            color   => $opt{color},
+            times   => $opt{blink},
+            delay   => $opt{delay},
+            channel => $opt{channel},
+            index   => $opt{index}
+        ) ;
     } else {
-        $stick->set_color( $r, $g, $b, $opt{channel}, $opt{index} ) ;
+        $stick->led(
+            color   => $opt{color},
+            channel => $opt{channel},
+            index   => $opt{index}
+        ) ;
     }
 }
 
