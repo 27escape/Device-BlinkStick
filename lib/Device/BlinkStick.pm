@@ -23,11 +23,11 @@ Device::BlinkStick
     # get the first blinkstick found
     my $device = $bs->first() ;
     # make it red
-    $first->set_color( 'red') ;
+    $first->led( color => 'red') ;
 
     sleep( 2) ;
-    # blink red for 5s (5000ms) on and off for 250ms
-    $first->blink( 'red', 5000, 250) ;    
+    # blink red for 5 times, delaying for 250ms between black and the color
+    $first->blink( color => 'red', delay => 250, times => 5) ;    
 
 =head1 DESCRIPTION
 
@@ -82,19 +82,19 @@ output some debug as things happen
 
 =item devices
 
-Get all blinkstick device objects available as a hash ref
+Get all blinkstick device L<Device::BlinkStick::Stick> objects available as a hash ref 
 
     my $bs = Device::BlinkStick->new() ;
     my $devices = $bs->devices() ;
 
 =item first
 
-Get the first blink stick device (object) found
+Get the first blink stick device (object L<Device::BlinkStick::Stick>) found
 
     my $bs = Device::BlinkStick->new() ;
     my $device = $bs->first() ;
     # make it red
-    $first->set_color( 'red') ;
+    $first->led( color => 'red') ;
 
 =back
 
@@ -167,7 +167,7 @@ Find a device by name or serial number
     my $bs = Device::BlinkStick->new() ;
     my $d = $bs->find( 'strip') ;   # I have a device I've named strip!
     $d->set_mode( 3) ;
-    $d->set_color( 'green') ;       # set all LEDs to green
+    $d->led( color => 'green') ;       # set all LEDs to green
 
 =over 4
 
