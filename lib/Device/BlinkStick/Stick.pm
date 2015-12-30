@@ -553,10 +553,6 @@ returns the number of leds on the device
 
 =cut
 
-=back
-
-=cut 
-
 sub get_leds
 {
     my $self = shift ;
@@ -587,6 +583,8 @@ set the number of leds connected to a device
 =back
 
 returns true/false depending if the led count was set
+
+=back
 
 =cut
 
