@@ -78,16 +78,24 @@ output some debug as things happen
 
 =head3 access methods
 
+<<<<<<< HEAD
 =over 4
 
 =item devices
+=======
+=item first
+>>>>>>> ccea58a0d231eb682993211741afd4ef10a9b608
 
 Get all blinkstick device L<Device::BlinkStick::Stick> objects available as a hash ref 
 
+<<<<<<< HEAD
     my $bs = Device::BlinkStick->new() ;
     my $devices = $bs->devices() ;
 
 =item first
+=======
+=item verbose
+>>>>>>> ccea58a0d231eb682993211741afd4ef10a9b608
 
 Get the first blink stick device (object L<Device::BlinkStick::Stick>) found
 

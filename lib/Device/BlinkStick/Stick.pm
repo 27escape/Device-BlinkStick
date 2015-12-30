@@ -582,6 +582,7 @@ returns true/false depending if the mode was set
 
 =cut
 
+<<<<<<< HEAD
 sub led
 {
     my $self = shift ;
@@ -673,6 +674,8 @@ returns the number of leds on the device
 
 =cut 
 
+=======
+>>>>>>> ccea58a0d231eb682993211741afd4ef10a9b608
 sub get_leds
 {
     my $self = shift ;
@@ -703,6 +706,8 @@ set the number of leds connected to a device
 =back
 
 returns true/false depending if the led count was set
+
+=back
 
 =cut
 
