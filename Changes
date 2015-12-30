@@ -1,3 +1,6 @@
+0.3.0 2015-12-23
+    * pod error fixes and added pod.t from MANWAR
+    * pod in stick script updated to reflect command line parameters
 0.2.0 2015-12-23
     * major overhaul to handle multiple sticks, also faster now, also handles pro sticks
 	* fix some pod errors
