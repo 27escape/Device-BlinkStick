@@ -16,28 +16,16 @@ Device::BlinkStick::Stick
     # get the first blinkstick found
     my $device = $bs->first() ;
     # make it red
-    $first->set_color( 'red') ;
+    $first->led( color => 'red') ;
 
     sleep( 2) ;
-    # blink red for 5s (5000ms) on and off for 250ms
-    $first->blink( 'red', 5000, 250) ;    
+    # blink red for 5 times, delaying for 250ms between black and the color
+    $first->blink( color => 'red', delay => 250, times => 5) ;    
 
 =head1 DESCRIPTION
 
-Object holding information and control about a specic blinkstick device
-
-See Also 
-
-=head2 left to do from python version
-
-    def _usb_get_string(self, device, length, index):
-    def get_led_data(self):
-    def data_to_message(self, data):
-    def set_random_color(self):
-    def turn_off(self):
-    def blink(self, red=0, green=0, blue=0, name=None, hex=None, repeats=1, delay=500):
-
-=over 4
+Object holding information and control about a specic blinkstick device, the control 
+of a single device is done in L<Device::BlinkStick::Stick>
 
 =cut
 
@@ -49,14 +37,16 @@ use strict ;
 use Moo ;
 use Data::Hexdumper ;
 use Time::HiRes qw(usleep) ;
+use WebColors ;
 
 use Data::Printer ;
 
 # ----------------------------------------------------------------------------
 
-use constant DEFAULT_TIMEOUT => 1000 ;
+use constant DEFAULT_USB_TIMEOUT => 1000 ;
 use constant EMULATE_LEDS => 16 ;
 use constant EMULATE_DELAY_USECS => 500 ;
+use constant DEFAULT_BLINK_TIME => 150 ;
 
 # ----------------------------------------------------------------------------
 
@@ -81,7 +71,7 @@ has brightness    => (
 
 # ----------------------------------------------------------------------------
 
-=item new
+=head2 new
 
 Create an instance of a blink stick device, requires an open USB file device
 
@@ -124,7 +114,7 @@ sub BUILD
 
 # ----------------------------------------------------------------------------
 
-=item info
+=head2 info
 
 get a hash of info about the device
 
@@ -158,7 +148,7 @@ sub _usb_read
 {
     my $self = shift ;
     my ( $b_request, $w_value, $w_index, $w_length, $timeout ) = @_ ;
-    $timeout ||= DEFAULT_TIMEOUT ;    # we will not allow indefinite timeouts
+    $timeout ||= DEFAULT_USB_TIMEOUT ;    # we will not allow indefinite timeouts
 
     my $bytes = ' ' x $w_length ;
     my $bm_requesttype
@@ -202,7 +192,7 @@ sub _usb_write
     my ( $b_request, $w_value, $w_index, $bytes, $w_length, $timeout ) = @_ ;
 
     $w_length //= length($bytes) ;
-    $timeout ||= DEFAULT_TIMEOUT ;    # we will not allow indefinite timeouts
+    $timeout ||= DEFAULT_USB_TIMEOUT ;    # we will not allow indefinite timeouts
 
     # 0x00 is LIBUSB_ENDPOINT_OUT ie write data out
     # 0x20 is LIBUSB_REQUEST_TYPE_CLASS (0x01 << 5)
@@ -251,7 +241,7 @@ sub _get_info_block
 
 # ----------------------------------------------------------------------------
 
-=item get_device_name
+=head2 get_device_name
 
 get the contents of info_block_1, usually the device name?
 
@@ -266,7 +256,7 @@ sub get_device_name
 
 # ----------------------------------------------------------------------------
 
-=item get_access_token
+=head2 get_access_token
 
 get the contents of get_info_block_2, maybe the acccess token for the online service?
 unused for perl
@@ -301,7 +291,7 @@ sub _set_info_block
 
 # ----------------------------------------------------------------------------
 
-=item set_device_name
+=head2 set_device_name
 
 =over 4
 
@@ -310,6 +300,8 @@ sub _set_info_block
 string to write into info_block_1, the device name
 
 This will get trimmed to 32 characters
+
+    $stick->set_device_name( 'strip') ;
 
 =back
 
@@ -327,7 +319,7 @@ sub set_device_name
 
 # ----------------------------------------------------------------------------
 
-=item set_access_token
+=head2 set_access_token
 
 =over 4
 
@@ -336,6 +328,9 @@ sub set_device_name
 string to write into info_block_2, the online access token. Not used by perl
 
 This will get trimmed to 32 characters
+
+    $stick->set_access_token( 'abc123dead') ;
+
 
 =back
 
@@ -353,7 +348,7 @@ sub set_access_token
 
 # ----------------------------------------------------------------------------
 
-=item get_mode
+=head2 get_mode
 
 returns the display mode
 
@@ -361,6 +356,8 @@ returns the display mode
 1 inverse
 2 WS2812
 3 WS2812 mirror - all leds the same
+
+    my $mode =  $stick->get_mode() ;
 
 =cut
 
@@ -380,7 +377,7 @@ sub get_mode
 
 # ----------------------------------------------------------------------------
 
-=item set_mode
+=head2 set_mode
 
 Set the display mode
 
@@ -390,10 +387,12 @@ Set the display mode
 
 mode to set 
 
-0 normal 
-1 inverse
-2 WS2812
-3 WS2812 mirror - all leds the same
+  0 normal 
+  1 inverse
+  2 WS2812
+  3 WS2812 mirror - all leds the same
+
+    $stick->set_mode( 3) ;
 
 =back
 
@@ -422,9 +421,11 @@ sub set_mode
 
 # ----------------------------------------------------------------------------
 
-=item get_color
+=head2 get_color
 
-returns the color as rgb
+returns the color as rgb from a channel and index
+
+    my $c = $stick->get_color( 0, 0 ) ;
 
 =cut
 
@@ -466,9 +467,11 @@ sub _apply_brightness
 
 # ----------------------------------------------------------------------------
 
-=item set_color
+=head2 set_color
 
 set the rgb color for a single pixel blinkstick, uses brightness 
+
+=head3 Parameters
 
 =over 4
 
@@ -493,6 +496,10 @@ blue part 0..255
 LED in block to use
 
 =back
+
+    $stick->set_color( 255, 0, 255, 0, 0) ;
+
+This should not be used directly, rather use the B<led> method instead
 
 returns true/false depending if the mode was set
 
@@ -547,13 +554,122 @@ sub set_color
 
 # ----------------------------------------------------------------------------
 
-=item get_leds
+=head2 led
 
-returns the number of leds on the device
+set the color of a single pixel blinkstick, uses brightness 
+
+=head3 Parameters
+
+=over 4
+
+=item color
+
+Color is either a colorname from L<WebColors> or a hex triplet of the form FF00AA
+
+=item channel
+
+64 LED block to use
+
+=item index 
+
+LED in block to use
+
+=back
+
+    $stick->led( color => 'green200', index => 0, channel => 0) ;
+   
+returns true/false depending if the mode was set
 
 =cut
 
+sub led
+{
+    my $self = shift ;
+    my $params = @_ % 2 ? shift : {@_};
+
+    if ( ref($params) ne 'HASH' ) {
+        warn "led accepts a hash or a hashref of parameters";
+        return 0;
+    }
+    my $r = $params->{color} || 'black' ;
+    my ( $g, $b ) ;
+    if ( $r !~ /^\d+$/ ) {
+        $r = lc($r) ;
+        if ( $r eq 'off' ) {
+            ( $r, $g, $b ) = ( 0, 0, 0 ) ;
+        } elsif ( $r =~ /(random|rand|rnd)/i ) {
+            ( $r, $g, $b )
+                = ( int( rand(255) ), int( rand(255) ), int( rand(255) ) ) ;
+        } else {
+            # try to determine what it should be
+            ( $r, $g, $b ) = to_rgb($r) ;
+        }
+    }
+
+    $self->set_color( $r, $g, $b, $params->{channel}, $params->{index}) ;
+}
+
+# ----------------------------------------------------------------------------
+
+=head2 blink
+
+blink a single pixel on and off, uses brightness 
+
+=head3 Parameters
+
+=over 4
+
+=item color
+
+Color is either a colorname from L<WebColors> or a hex triplet  FF00AA
+
+=item channel
+
+64 LED block to use
+
+=item index
+
+LED in block to use
+
+=item times
+
+Number of times to blink on and off
+
+=item delay
+
+Pause period between blinks, defaults to DEFAULT_BLINK_TIME which is 150ms
+
 =back
+
+    $stick->blink( color => 'green200', index => 0, channel => 0, times => 5) ;
+
+=cut
+
+sub blink
+{
+    my $self = shift ;
+    my $params = @_ % 2 ? shift : {@_};
+
+    if ( ref($params) ne 'HASH' ) {
+        warn "blink accepts a hash or a hashref of parameters";
+        return 0;
+    }
+
+    $params->{delay} ||= DEFAULT_BLINK_TIME ;
+
+    for ( my $i = 0; $i < $params->{times}; $i++ ) {
+        $self->led( color => 'black', channel => $params->{channel}, index => $params->{index} ) ;
+        usleep( $params->{delay} * 1000 ) ;
+        $self->led( color => $params->{color}, channel => $params->{channel}, index => $params->{index} ) ;
+        usleep( $params->{delay} * 1000 ) ;
+    }
+}
+
+# ----------------------------------------------------------------------------
+
+=head2 get_leds
+
+returns the number of leds on the device
 
 =cut 
 
@@ -574,7 +690,7 @@ sub get_leds
 
 # ----------------------------------------------------------------------------
 
-=item set_leds
+=head2 set_leds
 
 set the number of leds connected to a device
 
