@@ -73,6 +73,7 @@ has devices => ( is => 'ro', init_arg => 0 ) ;
 has first => ( is => 'ro', init_arg => 0 ) ;
 has verbose => ( is => 'ro' ) ;
 has inverse => ( is => 'ro' ) ;
+has _last_refresh => ( is => 'ro', init_arg => 0, default => sub { 0 } );
 
 # ----------------------------------------------------------------------------
 
@@ -140,12 +141,11 @@ Returns all blinkstick device objects available as a hash ref
 
 sub refresh_devices
 {
-    state $last = 0 ;
     my $self = shift ;
 
     # we don't want to update this too often as it takes ~ 0.4s to run
-    if ( !$last || $last + UPDATE_TIME < time() ) {
-        $last = time() ;
+    if ( !$self->{_last_refresh} || $self->{_last_refresh} + UPDATE_TIME < time() ) {
+        $self->{_last_refresh} = time() ;
         my $usb = Device::USB->new() ;
         my @sticks = $usb->list_devices( VENDOR_ID, PRODUCT_ID ) ;
 
