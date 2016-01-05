@@ -44,9 +44,9 @@ use Data::Printer ;
 # ----------------------------------------------------------------------------
 
 use constant DEFAULT_USB_TIMEOUT => 1000 ;
-use constant EMULATE_LEDS => 16 ;
+use constant EMULATE_LEDS        => 16 ;
 use constant EMULATE_DELAY_USECS => 500 ;
-use constant DEFAULT_BLINK_TIME => 150 ;
+use constant DEFAULT_BLINK_TIME  => 150 ;
 
 # ----------------------------------------------------------------------------
 
@@ -124,6 +124,13 @@ sub info
 {
     my $self = shift ;
 
+    my $colorname ;
+    my @c = $self->get_color() ;
+    $colorname = rgb_to_colorname( @c ) ;
+    if ( !$colorname ) {
+        $colorname = sprintf( "#%02X%02X%02X", @c ) ;
+    }
+
     return {
         device => sprintf( "%04X:%04X",
             $self->{device}->idVendor(),
@@ -136,6 +143,7 @@ sub info
         leds          => $self->{_leds},
         mode          => defined $self->{_mode} ? $self->{_mode} : 0,
         color         => [ $self->get_color() ],
+        colorname     => $colorname,
         type          => $self->type,
     } ;
 }
@@ -148,7 +156,7 @@ sub _usb_read
 {
     my $self = shift ;
     my ( $b_request, $w_value, $w_index, $w_length, $timeout ) = @_ ;
-    $timeout ||= DEFAULT_USB_TIMEOUT ;    # we will not allow indefinite timeouts
+    $timeout ||= DEFAULT_USB_TIMEOUT ; # we will not allow indefinite timeouts
 
     my $bytes = ' ' x $w_length ;
     my $bm_requesttype
@@ -165,15 +173,15 @@ sub _usb_read
             . "read $count bytes" ;
     }
 
-    if ( $count != $w_length && $self->verbose) {
+    if ( $count != $w_length && $self->verbose ) {
         if ( $count < 0 ) {
             warn
                 "Error reading USB device _usb_read( $b_request, $w_value, $w_index, $w_length)"
-;
+                ;
         } else {
             warn
                 "unknown error reading USB _usb_read( $b_request, $w_value, $w_index, $w_length)"
- ;
+                ;
         }
 
         # if we did not read it all or read nothing, clear it
@@ -192,7 +200,7 @@ sub _usb_write
     my ( $b_request, $w_value, $w_index, $bytes, $w_length, $timeout ) = @_ ;
 
     $w_length //= length($bytes) ;
-    $timeout ||= DEFAULT_USB_TIMEOUT ;    # we will not allow indefinite timeouts
+    $timeout ||= DEFAULT_USB_TIMEOUT ; # we will not allow indefinite timeouts
 
     # 0x00 is LIBUSB_ENDPOINT_OUT ie write data out
     # 0x20 is LIBUSB_REQUEST_TYPE_CLASS (0x01 << 5)
@@ -208,9 +216,9 @@ sub _usb_write
             . "wrote $count bytes" ;
     }
     my $status = 0 ;
-    if ( $count != $w_length && $self->verbose) {
+    if ( $count != $w_length && $self->verbose ) {
         if ( $count < 0 ) {
-            warn "Error writing to BlinkStick";
+            warn "Error writing to BlinkStick" ;
         } else {
             warn "Unknown error writing to BlinkStick" ;
         }
@@ -537,7 +545,7 @@ sub set_color
         # to write to a multi pixel device
         # emulate the write to all, by actually writing to all
         if ( $self->{_mode} == 3 ) {
-            for ( my $i = 0; $i < EMULATE_LEDS ; $i++ ) {
+            for ( my $i = 0; $i < EMULATE_LEDS; $i++ ) {
                 my $block = pack( "CCCCCC", 5, $channel, $i, $r, $g, $b ) ;
                 $self->_usb_write( 0x9, 0x0005, 0, $block, length($block) ) ;
                 usleep(EMULATE_DELAY_USECS) ;
@@ -585,11 +593,11 @@ returns true/false depending if the mode was set
 sub led
 {
     my $self = shift ;
-    my $params = @_ % 2 ? shift : {@_};
+    my $params = @_ % 2 ? shift : {@_} ;
 
     if ( ref($params) ne 'HASH' ) {
-        warn "led accepts a hash or a hashref of parameters";
-        return 0;
+        warn "led accepts a hash or a hashref of parameters" ;
+        return 0 ;
     }
     my $r = $params->{color} || 'black' ;
     my ( $g, $b ) ;
@@ -606,7 +614,7 @@ sub led
         }
     }
 
-    $self->set_color( $r, $g, $b, $params->{channel}, $params->{index}) ;
+    $self->set_color( $r, $g, $b, $params->{channel}, $params->{index} ) ;
 }
 
 # ----------------------------------------------------------------------------
@@ -648,19 +656,27 @@ Pause period between blinks, defaults to DEFAULT_BLINK_TIME which is 150ms
 sub blink
 {
     my $self = shift ;
-    my $params = @_ % 2 ? shift : {@_};
+    my $params = @_ % 2 ? shift : {@_} ;
 
     if ( ref($params) ne 'HASH' ) {
-        warn "blink accepts a hash or a hashref of parameters";
-        return 0;
+        warn "blink accepts a hash or a hashref of parameters" ;
+        return 0 ;
     }
 
     $params->{delay} ||= DEFAULT_BLINK_TIME ;
 
     for ( my $i = 0; $i < $params->{times}; $i++ ) {
-        $self->led( color => 'black', channel => $params->{channel}, index => $params->{index} ) ;
+        $self->led(
+            color   => 'black',
+            channel => $params->{channel},
+            index   => $params->{index}
+        ) ;
         usleep( $params->{delay} * 1000 ) ;
-        $self->led( color => $params->{color}, channel => $params->{channel}, index => $params->{index} ) ;
+        $self->led(
+            color   => $params->{color},
+            channel => $params->{channel},
+            index   => $params->{index}
+        ) ;
         usleep( $params->{delay} * 1000 ) ;
     }
 }
