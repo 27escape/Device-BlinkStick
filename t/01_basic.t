@@ -20,7 +20,11 @@ use strict ;
 use warnings ;
 use Test::More tests => 2 ;
 
-BEGIN { use_ok('Device::BlinkStick') ; }
+BEGIN { 
+    $ENV{PERL_INLINE_DIRECTORY}= '/tmp' ;
+
+    use_ok('Device::BlinkStick') ;
+ }
 
 SKIP: {
     if ( $ENV{AUTHOR_TESTING} ) {
@@ -50,6 +54,7 @@ SKIP: {
             $stick->set_color( 0, 0,   0 ) ;
             $stick->set_color( 0, 255, 0 ) ;
             ( $r, $g, $b ) = $stick->get_color() ;
+            # diag "$r-$g-$b" ;
             ok( "$r-$g-$b" eq '0-255-0', "set color 0-255-0" ) ;
             $stick->led( color => 'blue' ) ;
             ( $r, $g, $b ) = $stick->get_color() ;
