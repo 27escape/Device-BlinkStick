@@ -1,3 +1,7 @@
+0.4.0 2016-01-04
+    * add colorname to info 
+    * use colorname in stick script
+    * clear first and devices variables before a refresh
 0.3.0 2015-12-30
     * pod error fixes and added pod.t from MANWAR
     * pod in stick script updated to reflect command line parameters
