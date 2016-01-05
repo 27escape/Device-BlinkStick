@@ -1,4 +1,5 @@
 0.4.0 2016-01-04
+    * fix _Inline files being left around
     * add colorname to info 
     * use colorname in stick script
     * clear first and devices variables before a refresh

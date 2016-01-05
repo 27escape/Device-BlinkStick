@@ -40,9 +40,24 @@ package Device::BlinkStick ;
 use 5.014 ;
 use warnings ;
 use strict ;
+
+# we need to set the PERL_INLINE_DIRECTORY environment variable to something 
+# not in the current directory BEFORE we load Device::USB
+BEGIN {
+    use Path::Tiny ;
+    
+    my $user = getlogin || getpwuid($<) || "anyone";
+
+    $ENV{PERL_INLINE_DIRECTORY} = "/tmp/_Inline/$user/" . __PACKAGE__ ;
+    $ENV{PERL_INLINE_DIRECTORY} =~ s/::/_/g ;
+    # make sure the directory exists
+    path( $ENV{PERL_INLINE_DIRECTORY})->mkpath() ;
+}
+
 use Moo ;
 use Device::USB ;
 use Device::BlinkStick::Stick ;
+
 
 # ----------------------------------------------------------------------------
 
