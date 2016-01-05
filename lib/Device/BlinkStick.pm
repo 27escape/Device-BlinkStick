@@ -134,9 +134,12 @@ sub refresh_devices
         my $usb = Device::USB->new() ;
         my @sticks = $usb->list_devices( VENDOR_ID, PRODUCT_ID ) ;
 
+        # always rebuild the data set
+        $self->{devices} = {} ;
+        delete $self->{first} ;
+
         # find all devices
         if ( scalar(@sticks) ) {
-            delete $self->{first} ;
             $self->{devices} = {} ;
             foreach my $dev (@sticks) {
                 my $device = Device::BlinkStick::Stick->new(
