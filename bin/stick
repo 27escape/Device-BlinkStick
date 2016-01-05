@@ -69,19 +69,13 @@ sub show_info
 {
     my $stick = shift ;
     my $info  = $stick->info() ;
-    my ( $r, $g, $b ) = @{ $info->{color} } ;
-    my $color ;
-    $color = rgb_to_colorname( $r, $g, $b ) ;
-    if ( !$color ) {
-        $color = sprintf( "#%02X%02X%02X", $r, $g, $b ) ;
-    }
-
+    
     # Manufacturer:   $info->{manufacturer}
     # Description:    $info->{product}
     say "Device $info->{serial_number}" ;
     say "    Name:   $info->{device_name}"  if ( $info->{device_name} ) ;
     say "    Token:  $info->{access_token}" if ( $info->{access_token} ) ;
-    say "    Color:  $color" ;
+    say "    Color:  " . $info->{colorname} ;
     say "    Mode:   $info->{mode}" ;
     say "    Type:   $info->{type}" ;
     say "    Leds:   $info->{leds}" if ( $info->{type} eq 'pro' ) ;
